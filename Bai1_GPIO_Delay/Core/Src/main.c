@@ -66,12 +66,12 @@
 int statusSetupTime = INIT_SYSTEM;
 int timeBlink = 0;
 int statusSystem = MODE_1;
-int pre_hour;
-int pre_min;
-int pre_sec;
-int set_hour;
-int set_min;
-int set_sec;
+int pre_hour = 0;
+int pre_min = 0;
+int pre_sec = 0;
+int set_hour = 23;
+int set_min = 59;
+int set_sec = 59;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -145,10 +145,10 @@ int main(void) {
 		button_Scan();
         if (statusSystem == MODE_1){
             ds3231_ReadTime();
-            if (ds3231_hours > set_hour)
-            {
-            	HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
-            }
+//            if (ds3231_hours > set_hour)
+//            {
+//            	HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
+//            }
         }
 
 		DisplayTime();
@@ -228,6 +228,27 @@ void SystemClock_Config(void)
 	}
 	void DisplayTime()
 	{
+        if (ds3231_hours > set_hour || (ds3231_hours == set_hour && ds3231_min > set_min) ||   (ds3231_hours == set_hour && ds3231_min == set_min && ds3231_sec > set_sec))
+        {
+        	lcd_ShowString(90, 160, "ALARM", YELLOW, BLACK, 24, 0);
+        }
+        else
+        {
+        	lcd_ShowString(90, 160, "     ", YELLOW, BLACK, 24, 0);
+        }
+        lcd_ShowString(20, 190, "SET", GREEN, BLACK, 24, 0);
+
+		lcd_ShowIntNum(70, 190, set_hour/10, 1, GREEN, BLACK, 24);
+		lcd_ShowIntNum(83, 190, set_hour%10, 1, GREEN, BLACK, 24);
+		lcd_ShowChar(96, 190, ':', GREEN, BLACK, 24, 0);
+		lcd_ShowIntNum(110, 190, set_min/10, 1, GREEN, BLACK, 24);
+		lcd_ShowIntNum(123, 190, set_min%10, 1, GREEN, BLACK, 24);
+		lcd_ShowChar(136, 190, ':', GREEN, BLACK, 24, 0);
+		lcd_ShowIntNum(150, 190, set_sec/10, 1, GREEN, BLACK, 24);
+		lcd_ShowIntNum(163, 190, set_sec%10, 1, GREEN, BLACK, 24);
+
+        lcd_ShowString(80, 70, "MODE", YELLOW, BLACK, 24, 0);
+        lcd_ShowIntNum(130, 70, statusSystem, 1, YELLOW, BLACK, 24);
 		if(statusSetupTime == INIT_SYSTEM) ds3231_ReadTime();
 
 		if(statusSetupTime != SET_HOUR || (statusSetupTime == SET_HOUR && timeBlink >= 5)){
