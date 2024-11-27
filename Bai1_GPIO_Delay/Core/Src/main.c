@@ -458,6 +458,7 @@ void SystemClock_Config(void)
             if (IsButtonMode())
             {
                 statusSystem = MODE_4;
+                uart_Rs232SendString((void*)"Hour: ");
                 set_hour = ds3231_hours;
                 set_min = ds3231_min;
                 set_sec = ds3231_sec;
@@ -509,19 +510,23 @@ void SystemClock_Config(void)
         	            SetUartHour();
         	            if(IsButtonSet())
         	                statusSetupTime = SET_UART_MIN;
+        	            	uart_Rs232SendString((void*)"Minute: ");
         	            break;
         	        case SET_UART_MIN:
         	            SetUartMin();
         	            if(IsButtonSet())
         	                statusSetupTime = SET_UART_SEC;
+        	            	uart_Rs232SendString((void*)"Second: ");
         	            break;
         	        case SET_UART_SEC:
         	        	SetUartSec();
         	            if(IsButtonSet())
         	                statusSetupTime = SET_UART_HOUR;
+        	            	uart_Rs232SendString((void*)"Hour: ");
         	            break;
         	        default:
         	            statusSetupTime = SET_UART_HOUR;
+        	            uart_Rs232SendString((void*)"Hour: ");
         	            break;
         	    }
             }
