@@ -22,9 +22,10 @@
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 #include "fsmc.h"
-#include <stdio.h>
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "software_timer.h"
@@ -33,6 +34,8 @@
 #include "lcd.h"
 #include "picture.h"
 #include "ds3231.h"
+#include "uart.h"
+#include "ring_buffer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,6 +95,7 @@ void SetDate();
 void SetMonth();
 void SetYear();
 void SetUpTime();
+void TestUart();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -103,39 +107,41 @@ void SetUpTime();
   * @brief  The application entry point.
   * @retval int
   */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_TIM2_Init();
-	MX_SPI1_Init();
-	MX_FSMC_Init();
-	MX_I2C1_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_SPI1_Init();
+  MX_TIM2_Init();
+  MX_FSMC_Init();
+  MX_I2C1_Init();
+  MX_USART1_UART_Init();
+  /* USER CODE BEGIN 2 */
 	system_init();
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	lcd_Clear(BLACK);
 	UpdateTime();
 
@@ -150,16 +156,29 @@ int main(void) {
 //            	HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
 //            }
         }
+        TestUart();
+		if (!isRingBufferEmpty(&buffer)) {
+			lcd_ShowIntNum(120, 220, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
+		} else {
+			lcd_ShowString(100, 220, "Empty!", WHITE, BLACK, 16, 0);
+		}
 
+
+		/*
+		 * TURN OFF DISPLAY TIME
+		 *
 		DisplayTime();
 		SetUpTime();
+		*/
+
+
+
     /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
-
 
 /**
   * @brief System Clock Configuration
@@ -213,10 +232,23 @@ void SystemClock_Config(void)
 
 		lcd_init();
 		ds3231_init();
+		uart_init_rs232();
 
 		timer_init();
 		setTimer2(50);
 	}
+
+	void TestUart() {
+		if (button_count[13] == 1) {
+			uart_Rs232SendNum(ds3231_hours);
+			uart_Rs232SendString((void*)":");
+			uart_Rs232SendNum(ds3231_min);
+			uart_Rs232SendString((void*)":");
+			uart_Rs232SendNum(ds3231_sec);
+			uart_Rs232SendString((void*)"\n");
+		}
+	}
+
 	void UpdateTime(){
 		ds3231_Write(ADDRESS_YEAR, 24);
 		ds3231_Write(ADDRESS_MONTH, 11);

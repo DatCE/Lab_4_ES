@@ -14,6 +14,7 @@ C_SRCS += \
 ../Core/Src/leg_7seg.c \
 ../Core/Src/main.c \
 ../Core/Src/picture.c \
+../Core/Src/ring_buffer.c \
 ../Core/Src/software_timer.c \
 ../Core/Src/spi.c \
 ../Core/Src/stm32f4xx_hal_msp.c \
@@ -22,6 +23,8 @@ C_SRCS += \
 ../Core/Src/sysmem.c \
 ../Core/Src/system_stm32f4xx.c \
 ../Core/Src/tim.c \
+../Core/Src/uart.c \
+../Core/Src/usart.c \
 ../Core/Src/utils.c 
 
 OBJS += \
@@ -34,6 +37,7 @@ OBJS += \
 ./Core/Src/leg_7seg.o \
 ./Core/Src/main.o \
 ./Core/Src/picture.o \
+./Core/Src/ring_buffer.o \
 ./Core/Src/software_timer.o \
 ./Core/Src/spi.o \
 ./Core/Src/stm32f4xx_hal_msp.o \
@@ -42,6 +46,8 @@ OBJS += \
 ./Core/Src/sysmem.o \
 ./Core/Src/system_stm32f4xx.o \
 ./Core/Src/tim.o \
+./Core/Src/uart.o \
+./Core/Src/usart.o \
 ./Core/Src/utils.o 
 
 C_DEPS += \
@@ -54,6 +60,7 @@ C_DEPS += \
 ./Core/Src/leg_7seg.d \
 ./Core/Src/main.d \
 ./Core/Src/picture.d \
+./Core/Src/ring_buffer.d \
 ./Core/Src/software_timer.d \
 ./Core/Src/spi.d \
 ./Core/Src/stm32f4xx_hal_msp.d \
@@ -62,6 +69,8 @@ C_DEPS += \
 ./Core/Src/sysmem.d \
 ./Core/Src/system_stm32f4xx.d \
 ./Core/Src/tim.d \
+./Core/Src/uart.d \
+./Core/Src/usart.d \
 ./Core/Src/utils.d 
 
 
