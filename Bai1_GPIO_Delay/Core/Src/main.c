@@ -53,9 +53,13 @@
 #define SET_DATE        5
 #define SET_MONTH       6
 #define SET_YEAR        7
+#define SET_UART_HOUR	8
+#define SET_UART_MIN	9
+#define SET_UART_SEC	10
 #define MODE_1          0
 #define MODE_2          1
 #define MODE_3          2
+#define MODE_4			3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -75,6 +79,9 @@ int pre_sec = 0;
 int set_hour = 23;
 int set_min = 59;
 int set_sec = 59;
+int uart_hour = 0;
+int uart_min = 0;
+int uart_sec = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +102,9 @@ void SetDate();
 void SetMonth();
 void SetYear();
 void SetUpTime();
+void SetUartHour();
+void SetUartMin();
+void SetUartSec();
 void TestUart();
 /* USER CODE END PFP */
 
@@ -164,12 +174,8 @@ int main(void)
 		}
 
 
-		/*
-		 * TURN OFF DISPLAY TIME
-		 *
 		DisplayTime();
 		SetUpTime();
-		*/
 
 
 
@@ -379,6 +385,7 @@ void SystemClock_Config(void)
 			lcd_ShowIntNum(176, 130, ds3231_year, 2, YELLOW, BLACK, 24);
 		}
 
+
 	}
 
 	void SetUpTime()
@@ -450,15 +457,14 @@ void SystemClock_Config(void)
         {
             if (IsButtonMode())
             {
-                statusSystem = MODE_1;
+                statusSystem = MODE_4;
                 set_hour = ds3231_hours;
                 set_min = ds3231_min;
                 set_sec = ds3231_sec;
                 ds3231_Write(ADDRESS_HOUR, pre_hour);
                 ds3231_Write(ADDRESS_MIN, pre_min);
                 ds3231_Write(ADDRESS_SEC, pre_sec);
-                statusSetupTime = INIT_SYSTEM;
-
+                statusSetupTime = SET_UART_HOUR;
             }
             else
             {
@@ -481,6 +487,41 @@ void SystemClock_Config(void)
         	            break;
         	        default:
         	            statusSetupTime = SET_HOUR;
+        	            break;
+        	    }
+            }
+        }
+        else if (statusSystem == MODE_4)
+        {
+            if (IsButtonMode())
+            {
+                statusSystem = MODE_1;
+                statusSetupTime = INIT_SYSTEM;
+                lcd_ShowString(20, 40, "                  ", GREEN, BLACK, 24, 0);
+            }
+            else
+            {
+//            	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
+//            	uart_hour = getFromRingBuffer(&buffer);
+        	    switch(statusSetupTime)
+        	    {
+        	        case SET_UART_HOUR:
+        	            SetUartHour();
+        	            if(IsButtonSet())
+        	                statusSetupTime = SET_UART_MIN;
+        	            break;
+        	        case SET_UART_MIN:
+        	            SetUartMin();
+        	            if(IsButtonSet())
+        	                statusSetupTime = SET_UART_SEC;
+        	            break;
+        	        case SET_UART_SEC:
+        	        	SetUartSec();
+        	            if(IsButtonSet())
+        	                statusSetupTime = SET_UART_HOUR;
+        	            break;
+        	        default:
+        	            statusSetupTime = SET_UART_HOUR;
         	            break;
         	    }
             }
@@ -666,6 +707,27 @@ void SystemClock_Config(void)
 	        	ds3231_year = 99;
 	        ds3231_Write(ADDRESS_YEAR, ds3231_year);
 	    }
+	}
+
+	void SetUartHour()
+	{
+    	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
+    	uart_hour = getFromRingBuffer(&buffer);
+    	ds3231_Write(ADDRESS_HOUR, uart_hour);
+	}
+
+	void SetUartMin()
+	{
+    	lcd_ShowString(20, 40, "Updating min ...", GREEN, BLACK, 24, 0);
+    	uart_min = getFromRingBuffer(&buffer);
+    	ds3231_Write(ADDRESS_HOUR, uart_min);
+	}
+
+	void SetUartSec()
+	{
+    	lcd_ShowString(20, 40, "Updating sec ...", GREEN, BLACK, 24, 0);
+    	uart_sec = getFromRingBuffer(&buffer);
+    	ds3231_Write(ADDRESS_HOUR, uart_sec);
 	}
 /* USER CODE END 4 */
 
