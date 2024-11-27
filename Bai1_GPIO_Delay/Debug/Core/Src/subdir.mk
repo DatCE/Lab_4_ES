@@ -5,7 +5,10 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/adc.c \
 ../Core/Src/buton.c \
+../Core/Src/buzzer.c \
+../Core/Src/dma.c \
 ../Core/Src/ds3231.c \
 ../Core/Src/fsmc.c \
 ../Core/Src/gpio.c \
@@ -15,6 +18,7 @@ C_SRCS += \
 ../Core/Src/main.c \
 ../Core/Src/picture.c \
 ../Core/Src/ring_buffer.c \
+../Core/Src/sensor.c \
 ../Core/Src/software_timer.c \
 ../Core/Src/spi.c \
 ../Core/Src/stm32f4xx_hal_msp.c \
@@ -28,7 +32,10 @@ C_SRCS += \
 ../Core/Src/utils.c 
 
 OBJS += \
+./Core/Src/adc.o \
 ./Core/Src/buton.o \
+./Core/Src/buzzer.o \
+./Core/Src/dma.o \
 ./Core/Src/ds3231.o \
 ./Core/Src/fsmc.o \
 ./Core/Src/gpio.o \
@@ -38,6 +45,7 @@ OBJS += \
 ./Core/Src/main.o \
 ./Core/Src/picture.o \
 ./Core/Src/ring_buffer.o \
+./Core/Src/sensor.o \
 ./Core/Src/software_timer.o \
 ./Core/Src/spi.o \
 ./Core/Src/stm32f4xx_hal_msp.o \
@@ -51,7 +59,10 @@ OBJS += \
 ./Core/Src/utils.o 
 
 C_DEPS += \
+./Core/Src/adc.d \
 ./Core/Src/buton.d \
+./Core/Src/buzzer.d \
+./Core/Src/dma.d \
 ./Core/Src/ds3231.d \
 ./Core/Src/fsmc.d \
 ./Core/Src/gpio.d \
@@ -61,6 +72,7 @@ C_DEPS += \
 ./Core/Src/main.d \
 ./Core/Src/picture.d \
 ./Core/Src/ring_buffer.d \
+./Core/Src/sensor.d \
 ./Core/Src/software_timer.d \
 ./Core/Src/spi.d \
 ./Core/Src/stm32f4xx_hal_msp.d \

@@ -19,6 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
@@ -36,6 +38,8 @@
 #include "ds3231.h"
 #include "uart.h"
 #include "ring_buffer.h"
+#include "sensor.h"
+#include "buzzer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,21 +49,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define INIT_SYSTEM     0
-#define SET_HOUR        1
-#define SET_MINUTE      2
-#define SET_SEC 		3
-#define SET_DAY         4
-#define SET_DATE        5
-#define SET_MONTH       6
-#define SET_YEAR        7
-#define SET_UART_HOUR	8
-#define SET_UART_MIN	9
-#define SET_UART_SEC	10
-#define MODE_1          0
-#define MODE_2          1
-#define MODE_3          2
-#define MODE_4			3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -70,42 +59,22 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int statusSetupTime = INIT_SYSTEM;
-int timeBlink = 0;
-int statusSystem = MODE_1;
-int pre_hour = 0;
-int pre_min = 0;
-int pre_sec = 0;
-int set_hour = 23;
-int set_min = 59;
-int set_sec = 59;
-int uart_hour = 0;
-int uart_min = 0;
-int uart_sec = 0;
+int hour = 13;
+int min = 12;
+int second = 23;
+int count_update = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
-void DisplayTime();
-void UpdateTime();
-unsigned char IsButtonSet();
-unsigned char IsButtonMode();
+void TestBuzzer();
+void TestADC();
+void test_7seg();
+void setTime_led7();
 unsigned char IsButtonUp();
 unsigned char IsButtonDown();
-void SetHour();
-void SetMinute();
-void SetSecond();
-void SetDay();
-void SetDate();
-void SetMonth();
-void SetYear();
-void SetUpTime();
-void SetUartHour();
-void SetUartMin();
-void SetUartSec();
-void TestUart();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -145,7 +114,10 @@ int main(void)
   MX_TIM2_Init();
   MX_FSMC_Init();
   MX_I2C1_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
   MX_USART1_UART_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
 	system_init();
   /* USER CODE END 2 */
@@ -153,32 +125,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	lcd_Clear(BLACK);
-	UpdateTime();
 
 	while (1) {
 		while (!flag_timer2);
 		flag_timer2 = 0;
 		button_Scan();
-        if (statusSystem == MODE_1){
-            ds3231_ReadTime();
-//            if (ds3231_hours > set_hour)
-//            {
-//            	HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
-//            }
-        }
-        TestUart();
-		if (!isRingBufferEmpty(&buffer)) {
-			lcd_ShowIntNum(120, 220, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
-		} else {
-			lcd_ShowString(100, 220, "Empty!", WHITE, BLACK, 16, 0);
-		}
-
-
-		DisplayTime();
-		SetUpTime();
-
-
-
+		TestADC();
+		TestBuzzer();
+		setTime_led7();
+		led7_Scan();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -232,18 +187,45 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 	void system_init() {
-		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
-		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
-		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
-
+		button_init();
 		lcd_init();
-		ds3231_init();
-		uart_init_rs232();
+		led7_init();
+		sensor_init();
+		buzzer_init();
 
 		timer_init();
 		setTimer2(50);
 	}
 
+	void test_7seg(){
+		//write number1 at led index 0 (not show dot)
+		led7_SetDigit(1, 0, 0);
+		led7_SetDigit(5, 1, 0);
+		led7_SetDigit(4, 2, 0);
+		led7_SetDigit(7, 3, 0);
+	}
+
+	void setTime_led7()
+	{
+		count_update = (count_update + 1) % 20;
+		if (count_update == 0)
+		{
+			second = second + 1;
+			if(second >= 60)
+			{
+			  second = 0;
+			  min = min + 1;
+			  if (min >= 60){
+				  min = 0;
+				  hour = (hour +1) % 24;
+			  }
+		  }
+			led7_SetDigit(hour/10, 0, 0);
+			led7_SetDigit(hour%10, 1, 0);
+			led7_SetDigit(min/10, 2, 0);
+			led7_SetDigit(min%10, 3, 0);
+		}
+	}
 	void TestUart() {
 		if (button_count[13] == 1) {
 			uart_Rs232SendNum(ds3231_hours);
@@ -255,298 +237,68 @@ void SystemClock_Config(void)
 		}
 	}
 
-	void UpdateTime(){
-		ds3231_Write(ADDRESS_YEAR, 24);
-		ds3231_Write(ADDRESS_MONTH, 11);
-		ds3231_Write(ADDRESS_DATE, 15);
-		ds3231_Write(ADDRESS_DAY, 6);
-		ds3231_Write(ADDRESS_HOUR, 2);
-		ds3231_Write(ADDRESS_MIN, 45);
-		ds3231_Write(ADDRESS_SEC, 0);
-	}
-	void DisplayTime()
-	{
-        if (ds3231_hours > set_hour || (ds3231_hours == set_hour && ds3231_min > set_min) ||   (ds3231_hours == set_hour && ds3231_min == set_min && ds3231_sec > set_sec))
-        {
-        	lcd_ShowString(90, 160, "ALARM", YELLOW, BLACK, 24, 0);
-        }
-        else
-        {
-        	lcd_ShowString(90, 160, "     ", YELLOW, BLACK, 24, 0);
-        }
-        lcd_ShowString(20, 190, "SET", GREEN, BLACK, 24, 0);
-
-		lcd_ShowIntNum(70, 190, set_hour/10, 1, GREEN, BLACK, 24);
-		lcd_ShowIntNum(83, 190, set_hour%10, 1, GREEN, BLACK, 24);
-		lcd_ShowChar(96, 190, ':', GREEN, BLACK, 24, 0);
-		lcd_ShowIntNum(110, 190, set_min/10, 1, GREEN, BLACK, 24);
-		lcd_ShowIntNum(123, 190, set_min%10, 1, GREEN, BLACK, 24);
-		lcd_ShowChar(136, 190, ':', GREEN, BLACK, 24, 0);
-		lcd_ShowIntNum(150, 190, set_sec/10, 1, GREEN, BLACK, 24);
-		lcd_ShowIntNum(163, 190, set_sec%10, 1, GREEN, BLACK, 24);
-
-        lcd_ShowString(80, 70, "MODE", YELLOW, BLACK, 24, 0);
-        lcd_ShowIntNum(130, 70, statusSystem, 1, YELLOW, BLACK, 24);
-		if(statusSetupTime == INIT_SYSTEM) ds3231_ReadTime();
-
-		if(statusSetupTime != SET_HOUR || (statusSetupTime == SET_HOUR && timeBlink >= 5)){
-			lcd_ShowIntNum(70, 100, ds3231_hours/10, 1, GREEN, BLACK, 24);
-			lcd_ShowIntNum(83, 100, ds3231_hours%10, 1, GREEN, BLACK, 24);
-		}
-
-		lcd_ShowChar(96, 100, ':', GREEN, BLACK, 24, 0);
-
-		if(statusSetupTime != SET_MINUTE || (statusSetupTime == SET_MINUTE && timeBlink >= 5)){
-			lcd_ShowIntNum(110, 100, ds3231_min/10, 1, GREEN, BLACK, 24);
-			lcd_ShowIntNum(123, 100, ds3231_min%10, 1, GREEN, BLACK, 24);
-		}
-
-		lcd_ShowChar(136, 100, ':', GREEN, BLACK, 24, 0);
-
-		if(statusSetupTime != SET_SEC || (statusSetupTime == SET_SEC && timeBlink >= 5)){
-			lcd_ShowIntNum(150, 100, ds3231_sec/10, 1, GREEN, BLACK, 24);
-			lcd_ShowIntNum(163, 100, ds3231_sec%10, 1, GREEN, BLACK, 24);
-		}
-
-	    //////day
-		if(statusSetupTime != SET_DAY || (statusSetupTime == SET_DAY && timeBlink >= 5)){
-			switch(ds3231_day)
+	uint8_t count_adc = 0;
+	int alert = 0;
+	void TestADC() {
+		count_adc = (count_adc + 1) % 20;
+		if (count_adc == 0) {
+			sensor_Read();
+			if (sensor_GetPotentiometer() >= 0.7 * 4095)
 			{
-				case 1:
-					lcd_ShowString(20, 130, "SUN", YELLOW, BLACK, 24, 0);
-					break;
-				case 2:
-					lcd_ShowString(20, 130, "MON", YELLOW, BLACK, 24, 0);
-					break;
-				case 3:
-					lcd_ShowString(20, 130, "TUE", YELLOW, BLACK, 24, 0);
-					break;
-				case 4:
-					lcd_ShowString(20, 130, "WED", YELLOW, BLACK, 24, 0);
-					break;
-				case 5:
-					lcd_ShowString(20, 130, "THU", YELLOW, BLACK, 24, 0);
-					break;
-				case 6:
-					lcd_ShowString(20, 130, "FRI", YELLOW, BLACK, 24, 0);
-					break;
-				case 7:
-					lcd_ShowString(20, 130, "SAT", YELLOW, BLACK, 24, 0);
-					break;
+				if (alert == 0)
+				{
+					buzzer_SetVolume(0);
+					alert = 1;
+				}
+				else if (alert == 1)
+				{
+					buzzer_SetVolume(75);
+					alert = 0;
+				}
+				uart_Rs232SendString("------WARNING------\n");
+				uart_Rs232SendString("Potentiometer > 70%\n");
 			}
-		}
-
-		if(statusSetupTime != SET_MONTH || (statusSetupTime == SET_MONTH && timeBlink >= 5)){
-			switch(ds3231_month)
+			else
 			{
-				case 1:
-					lcd_ShowString(105, 130, "JAN", YELLOW, BLACK, 24, 0);
-					break;
-				case 2:
-					lcd_ShowString(105, 130, "FEB", YELLOW, BLACK, 24, 0);
-					break;
-				case 3:
-					lcd_ShowString(105, 130, "MAR", YELLOW, BLACK, 24, 0);
-					break;
-				case 4:
-					lcd_ShowString(105, 130, "APR", YELLOW, BLACK, 24, 0);
-					break;
-				case 5:
-					lcd_ShowString(105, 130, "MAY", YELLOW, BLACK, 24, 0);
-					break;
-				case 6:
-					lcd_ShowString(105, 130, "JUN", YELLOW, BLACK, 24, 0);
-					break;
-				case 7:
-					lcd_ShowString(105, 130, "JUL", YELLOW, BLACK, 24, 0);
-					break;
-				case 8:
-					lcd_ShowString(105, 130, "AUG", YELLOW, BLACK, 24, 0);
-					break;
-				case 9:
-					lcd_ShowString(105, 130, "SEP", YELLOW, BLACK, 24, 0);
-					break;
-				case 10:
-					lcd_ShowString(105, 130, "OCT", YELLOW, BLACK, 24, 0);
-					break;
-				case 11:
-					lcd_ShowString(105, 130, "NOV", YELLOW, BLACK, 24, 0);
-					break;
-				case 12:
-					lcd_ShowString(105, 130, "DEC", YELLOW, BLACK, 24, 0);
-					break;
+				buzzer_SetVolume(0);
 			}
-		}
-		if(statusSetupTime != SET_DATE || (statusSetupTime == SET_DATE && timeBlink >= 5)){
-			lcd_ShowIntNum(70, 130, ds3231_date, 2, YELLOW, BLACK, 24);
-		}
-		if(statusSetupTime != SET_YEAR || (statusSetupTime == SET_YEAR && timeBlink >= 5)){
-			lcd_ShowIntNum(150, 130, 20, 2, YELLOW, BLACK, 24);
-			lcd_ShowIntNum(176, 130, ds3231_year, 2, YELLOW, BLACK, 24);
-		}
+			lcd_ShowString(10, 80, "Voltage(V):", RED, BLACK, 16, 0);
+			lcd_ShowFloatNum(140, 80, sensor_GetVoltage(), 4, RED, BLACK, 16);
+			lcd_ShowString(10, 100, "Current(mA):", RED, BLACK, 16, 0);
+			lcd_ShowFloatNum(140, 100, sensor_GetCurrent(), 4, RED, BLACK, 16);
 
 
+			lcd_ShowString(10, 120, "Power(mW):", RED, BLACK, 16, 0);
+			lcd_ShowFloatNum(140, 120, sensor_GetCurrent() * sensor_GetVoltage(), 4, RED, BLACK, 16);
+
+			if (sensor_GetLight() <= 4095 * 0.5)
+			{
+				lcd_ShowString(10, 140, "Light:", RED, BLACK, 16, 0);
+				lcd_ShowString(140, 140, "Strong", RED, BLACK, 16, 0);
+			}
+			else
+			{
+				lcd_ShowString(10, 140, "Light:", RED, BLACK, 16, 0);
+				lcd_ShowString(140, 140, "Weak", RED, BLACK, 16, 0);
+			}
+
+			lcd_ShowString(10, 180, "Potentiometer:", RED, BLACK, 16, 0);
+			lcd_ShowIntNum(140, 180, sensor_GetPotentiometer(), 4, RED, BLACK,
+					16);
+			lcd_ShowString(10, 160, "Temperature(C):", RED, BLACK, 16, 0);
+			lcd_ShowFloatNum(140, 160, sensor_GetTemperature(), 4, RED, BLACK,
+					16);
+		}
 	}
 
-	void SetUpTime()
-	{
-        if (statusSystem == MODE_1)
-        {
-            if (IsButtonMode())
-            {
-                statusSystem = MODE_2;
-                statusSetupTime = SET_HOUR;
-            }
-        }
-        else if (statusSystem == MODE_2)
-        {
-            if (IsButtonMode())
-            {
-            	pre_hour = ds3231_hours;
-            	pre_min = ds3231_min;
-            	pre_sec = ds3231_sec;
-                statusSystem = MODE_3;
-            }
-            else
-            {
-        	    switch(statusSetupTime)
-        	    {
-        	        case SET_HOUR:
-        	            SetHour();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_MINUTE;
-        	            break;
-        	        case SET_MINUTE:
-        	            SetMinute();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_SEC;
-        	            break;
-        	        case SET_SEC:
-        	        	SetSecond();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_DAY;
-        	            break;
-        	        case SET_DAY:
-        	            SetDay();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_DATE;
-        	            break;
-        	        case SET_DATE:
-        	            SetDate();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_MONTH;
-        	            break;
-        	        case SET_MONTH:
-        	            SetMonth();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_YEAR;
-        	            break;
-        	        case SET_YEAR:
-        	            SetYear();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_HOUR;
-        	            break;
-        	        default:
-        	            statusSetupTime = SET_HOUR;
-        	            break;
-        	    }
-            }
+	void TestBuzzer() {
+		if (IsButtonUp()) {
+			buzzer_SetVolume(50);
+		}
 
-        }
-        else if (statusSystem == MODE_3)
-        {
-            if (IsButtonMode())
-            {
-                statusSystem = MODE_4;
-                uart_Rs232SendString((void*)"Hour: ");
-                set_hour = ds3231_hours;
-                set_min = ds3231_min;
-                set_sec = ds3231_sec;
-                ds3231_Write(ADDRESS_HOUR, pre_hour);
-                ds3231_Write(ADDRESS_MIN, pre_min);
-                ds3231_Write(ADDRESS_SEC, pre_sec);
-                statusSetupTime = SET_UART_HOUR;
-            }
-            else
-            {
-        	    switch(statusSetupTime)
-        	    {
-        	        case SET_HOUR:
-        	            SetHour();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_MINUTE;
-        	            break;
-        	        case SET_MINUTE:
-        	            SetMinute();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_SEC;
-        	            break;
-        	        case SET_SEC:
-        	        	SetSecond();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_HOUR;
-        	            break;
-        	        default:
-        	            statusSetupTime = SET_HOUR;
-        	            break;
-        	    }
-            }
-        }
-        else if (statusSystem == MODE_4)
-        {
-            if (IsButtonMode())
-            {
-                statusSystem = MODE_1;
-                statusSetupTime = INIT_SYSTEM;
-                lcd_ShowString(20, 40, "                  ", GREEN, BLACK, 24, 0);
-            }
-            else
-            {
-//            	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
-//            	uart_hour = getFromRingBuffer(&buffer);
-        	    switch(statusSetupTime)
-        	    {
-        	        case SET_UART_HOUR:
-        	            SetUartHour();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_UART_MIN;
-        	            	uart_Rs232SendString((void*)"Minute: ");
-        	            break;
-        	        case SET_UART_MIN:
-        	            SetUartMin();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_UART_SEC;
-        	            	uart_Rs232SendString((void*)"Second: ");
-        	            break;
-        	        case SET_UART_SEC:
-        	        	SetUartSec();
-        	            if(IsButtonSet())
-        	                statusSetupTime = SET_UART_HOUR;
-        	            	uart_Rs232SendString((void*)"Hour: ");
-        	            break;
-        	        default:
-        	            statusSetupTime = SET_UART_HOUR;
-        	            uart_Rs232SendString((void*)"Hour: ");
-        	            break;
-        	    }
-            }
-        }
-
-	}
-	//
-    unsigned char IsButtonSet()
-	{
-	    if (button_count[12] == 1)
-	        return 1;
-	    else
-	        return 0;
-	}
-	unsigned char IsButtonMode()
-	{
-	    if (button_count[14] == 1)
-	        return 1;
-	    else
-	        return 0;
+		if (IsButtonDown()) {
+			buzzer_SetVolume(0);
+		}
 	}
 
 	unsigned char IsButtonUp()
@@ -565,175 +317,6 @@ void SystemClock_Config(void)
 	        return 0;
 	}
 
-	void SetHour()
-	{
-//		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);
-	    timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(70, 100, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	        ds3231_hours++;
-	        if(ds3231_hours > 23)
-	            ds3231_hours = 0;
-	        ds3231_Write(ADDRESS_HOUR, ds3231_hours);
-	    }
-	    if(IsButtonDown())
-	    {
-	        ds3231_hours--;
-	        if(ds3231_hours < 0)
-	            ds3231_hours = 23;
-	        ds3231_Write(ADDRESS_HOUR, ds3231_hours);
-	    }
-	}
-
-	void SetMinute()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(110, 100, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	        ds3231_min++;
-	        if(ds3231_min > 59)
-	            ds3231_min = 0;
-	        ds3231_Write(ADDRESS_MIN, ds3231_min);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_min--;
-	        if(ds3231_min < 0)
-	        	ds3231_min = 59;
-	        ds3231_Write(ADDRESS_MIN, ds3231_min);
-	    }
-
-	}
-	void SetSecond()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(150, 100, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	    	ds3231_sec++;
-	        if(ds3231_sec > 59)
-	        	ds3231_sec = 0;
-	        ds3231_Write(ADDRESS_SEC, ds3231_sec);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_sec--;
-	        if(ds3231_sec < 0)
-	        	ds3231_sec = 59;
-	        ds3231_Write(ADDRESS_SEC, ds3231_sec);
-	    }
-
-	}
-
-	void SetDay()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(20, 130, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	    	ds3231_day++;
-	        if(ds3231_day > 7)
-	        	ds3231_day = 1;
-	        ds3231_Write(ADDRESS_DAY, ds3231_day);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_day--;
-	        if(ds3231_day < 1)
-	        	ds3231_day = 7;
-	        ds3231_Write(ADDRESS_DAY, ds3231_day);
-	    }
-	}
-
-	void SetDate()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(70, 130, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	    	ds3231_date++;
-	        if(ds3231_date > 31)
-	        	ds3231_date = 1;
-	        ds3231_Write(ADDRESS_DATE, ds3231_date);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_date--;
-	        if(ds3231_date < 1)
-	        	ds3231_date = 31;
-	        ds3231_Write(ADDRESS_DATE, ds3231_date);
-	    }
-	}
-
-	void SetMonth()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(105, 130, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	    	ds3231_month++;
-	        if(ds3231_month > 12)
-	        	ds3231_month = 1;
-	        ds3231_Write(ADDRESS_MONTH, ds3231_month);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_month--;
-	        if(ds3231_month < 1)
-	        	ds3231_month = 12;
-	        ds3231_Write(ADDRESS_MONTH, ds3231_month);
-	    }
-	}
-
-	void SetYear()
-	{
-		timeBlink = (timeBlink + 1)%20;
-	    if(timeBlink < 5)
-	    	lcd_ShowString(176, 130, "  ", GREEN, BLACK, 24, 0);
-	    if(IsButtonUp())
-	    {
-	    	ds3231_year++;
-	        if(ds3231_year > 99)
-	        	ds3231_year = 0;
-	        ds3231_Write(ADDRESS_YEAR, ds3231_year);
-	    }
-	    if(IsButtonDown())
-	    {
-	    	ds3231_year--;
-	        if(ds3231_year < 0)
-	        	ds3231_year = 99;
-	        ds3231_Write(ADDRESS_YEAR, ds3231_year);
-	    }
-	}
-
-	void SetUartHour()
-	{
-    	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
-    	uart_hour = getFromRingBuffer(&buffer);
-    	ds3231_Write(ADDRESS_HOUR, uart_hour);
-	}
-
-	void SetUartMin()
-	{
-    	lcd_ShowString(20, 40, "Updating min ...", GREEN, BLACK, 24, 0);
-    	uart_min = getFromRingBuffer(&buffer);
-    	ds3231_Write(ADDRESS_HOUR, uart_min);
-	}
-
-	void SetUartSec()
-	{
-    	lcd_ShowString(20, 40, "Updating sec ...", GREEN, BLACK, 24, 0);
-    	uart_sec = getFromRingBuffer(&buffer);
-    	ds3231_Write(ADDRESS_HOUR, uart_sec);
-	}
 /* USER CODE END 4 */
 
 /**
