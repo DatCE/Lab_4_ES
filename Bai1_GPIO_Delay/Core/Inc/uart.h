@@ -14,7 +14,7 @@
 #include "ring_buffer.h"
 
 extern RingBuffer buffer;
-
+extern uint8_t temp;
 void uart_init_rs232();
 
 void uart_Rs232SendString(uint8_t* str);

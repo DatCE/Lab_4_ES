@@ -11,9 +11,8 @@
 uint8_t receive_buffer1 = 0;
 uint8_t msg[100];
 RingBuffer buffer;
-
 /* Functions */
-
+uint8_t temp;
 uint32_t mypow_2(uint8_t m, uint8_t n) {
 	uint32_t result = 1;
 	while (n--)
@@ -72,6 +71,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 
 		// turn on the receice interrupt
+		temp = receive_buffer1;
 		addToRingBuffer(&buffer, receive_buffer1);
 		HAL_UART_Receive_IT(&huart1, &receive_buffer1, 1);
 	}

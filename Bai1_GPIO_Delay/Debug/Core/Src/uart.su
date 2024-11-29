@@ -1,7 +1,7 @@
-uart.c:17:10:mypow_2	24	static
-uart.c:24:6:uart_init_rs232	8	static
-uart.c:28:6:uart_Rs232SendString	16	static
-uart.c:33:6:uart_Rs232SendBytes	16	static
-uart.c:37:6:uart_Rs232SendNum	24	static
-uart.c:59:6:uart_Rs232SendNumPercent	16	static
-uart.c:67:6:HAL_UART_RxCpltCallback	16	static
+uart.c:16:10:mypow_2	24	static
+uart.c:23:6:uart_init_rs232	8	static
+uart.c:27:6:uart_Rs232SendString	16	static
+uart.c:32:6:uart_Rs232SendBytes	16	static
+uart.c:36:6:uart_Rs232SendNum	24	static
+uart.c:58:6:uart_Rs232SendNumPercent	16	static
+uart.c:66:6:HAL_UART_RxCpltCallback	16	static

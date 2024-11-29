@@ -147,8 +147,7 @@ int main(void)
 
 	while (1) {
 		while (!flag_timer2);
-		flag_timer2 = 0;
-		setTimer2(50);
+		setTimer2(250);
 		button_Scan();
         if (statusSystem == MODE_1){
             ds3231_ReadTime();
@@ -159,11 +158,13 @@ int main(void)
         }
         TestUart();
 		if (!isRingBufferEmpty(&buffer)) {
-			lcd_ShowIntNum(120, 220, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
+			lcd_ShowString(100, 220, "Not empty", WHITE, BLACK, 16, 0);
+			lcd_ShowIntNum(100, 240, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
 		} else {
-			lcd_ShowString(100, 220, "Empty!", WHITE, BLACK, 16, 0);
+			lcd_ShowString(100, 220, "Empty!   ", WHITE, BLACK, 16, 0);
+			lcd_ShowString(100, 240, "      ", WHITE, BLACK, 16, 0);
 		}
-
+//		lcd_ShowIntNum(120, 220, temp, 2, YELLOW, BLACK, 16);
 
 		/*
 		 * TURN OFF DISPLAY TIME
@@ -234,9 +235,9 @@ void SystemClock_Config(void)
 		lcd_init();
 		ds3231_init();
 		uart_init_rs232();
-
+		initRingBuffer(&buffer);
 		timer_init();
-		setTimer2(50);
+		setTimer2(250);
 	}
 
 	void TestUart() {
