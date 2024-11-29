@@ -37,7 +37,7 @@ int getFromRingBuffer(RingBuffer *buffer) {
     return -1;
   }
 
-  int data = buffer->data[buffer->head];
+  int data = buffer->data[buffer->head] - 48;
   buffer->head = (buffer->head + 1) % BUFFER_SIZE;
   return data;
 }

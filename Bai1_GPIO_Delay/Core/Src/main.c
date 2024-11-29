@@ -82,6 +82,7 @@ int set_sec = 59;
 int uart_hour = 0;
 int uart_min = 0;
 int uart_sec = 0;
+int uart_cnt = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,7 +158,7 @@ int main(void)
 
 	while (1) {
 		while (!flag_timer2);
-		flag_timer2 = 0;
+		setTimer2(50);
 		button_Scan();
         if (statusSystem == MODE_1){
             ds3231_ReadTime();
@@ -166,12 +167,12 @@ int main(void)
 //            	HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
 //            }
         }
-        TestUart();
-		if (!isRingBufferEmpty(&buffer)) {
-			lcd_ShowIntNum(120, 220, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
-		} else {
-			lcd_ShowString(100, 220, "Empty!", WHITE, BLACK, 16, 0);
-		}
+//        TestUart();
+//		if (!isRingBufferEmpty(&buffer)) {
+//			lcd_ShowIntNum(120, 220, getFromRingBuffer(&buffer), 2, YELLOW, BLACK, 16);
+//		} else {
+//			lcd_ShowString(100, 220, "Empty!", WHITE, BLACK, 16, 0);
+//		}
 
 
 		DisplayTime();
@@ -239,7 +240,7 @@ void SystemClock_Config(void)
 		lcd_init();
 		ds3231_init();
 		uart_init_rs232();
-
+		initRingBuffer(&buffer);
 		timer_init();
 		setTimer2(50);
 	}
@@ -388,6 +389,7 @@ void SystemClock_Config(void)
 
 	}
 
+	int count_send = 0;
 	void SetUpTime()
 	{
         if (statusSystem == MODE_1)
@@ -458,6 +460,7 @@ void SystemClock_Config(void)
             if (IsButtonMode())
             {
                 statusSystem = MODE_4;
+                uart_hour = 0;
                 uart_Rs232SendString((void*)"Hour: ");
                 set_hour = ds3231_hours;
                 set_min = ds3231_min;
@@ -509,23 +512,33 @@ void SystemClock_Config(void)
         	        case SET_UART_HOUR:
         	            SetUartHour();
         	            if(IsButtonSet())
+        	            {
+        	            	uart_min = 0;
         	                statusSetupTime = SET_UART_MIN;
         	            	uart_Rs232SendString((void*)"Minute: ");
+        	            }
         	            break;
         	        case SET_UART_MIN:
         	            SetUartMin();
         	            if(IsButtonSet())
+        	            {
+        	            	uart_sec = 0;
         	                statusSetupTime = SET_UART_SEC;
         	            	uart_Rs232SendString((void*)"Second: ");
+        	            }
         	            break;
         	        case SET_UART_SEC:
         	        	SetUartSec();
         	            if(IsButtonSet())
+        	            {
+        	            	uart_hour = 0;
         	                statusSetupTime = SET_UART_HOUR;
         	            	uart_Rs232SendString((void*)"Hour: ");
+        	            }
         	            break;
         	        default:
         	            statusSetupTime = SET_UART_HOUR;
+        	            uart_hour = 0;
         	            uart_Rs232SendString((void*)"Hour: ");
         	            break;
         	    }
@@ -717,22 +730,33 @@ void SystemClock_Config(void)
 	void SetUartHour()
 	{
     	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
-    	uart_hour = getFromRingBuffer(&buffer);
+    	while (!isRingBufferEmpty(&buffer))
+		{
+    		uart_hour = uart_hour * 10 + getFromRingBuffer(&buffer);
+		}
     	ds3231_Write(ADDRESS_HOUR, uart_hour);
 	}
 
 	void SetUartMin()
 	{
     	lcd_ShowString(20, 40, "Updating min ...", GREEN, BLACK, 24, 0);
-    	uart_min = getFromRingBuffer(&buffer);
-    	ds3231_Write(ADDRESS_HOUR, uart_min);
+    	while (!isRingBufferEmpty(&buffer))
+		{
+//    		uart_min += getFromRingBuffer(&buffer);
+    		uart_min = uart_min * 10 + getFromRingBuffer(&buffer);
+		}
+//    	lcd_ShowIntNum(100, 240, uart_min, 2, YELLOW, BLACK, 16);
+    	ds3231_Write(ADDRESS_MIN, uart_min);
 	}
 
 	void SetUartSec()
 	{
     	lcd_ShowString(20, 40, "Updating sec ...", GREEN, BLACK, 24, 0);
-    	uart_sec = getFromRingBuffer(&buffer);
-    	ds3231_Write(ADDRESS_HOUR, uart_sec);
+    	while (!isRingBufferEmpty(&buffer))
+		{
+    		uart_sec = uart_sec * 10 + getFromRingBuffer(&buffer);
+		}
+    	ds3231_Write(ADDRESS_SEC, uart_sec);
 	}
 /* USER CODE END 4 */
 
