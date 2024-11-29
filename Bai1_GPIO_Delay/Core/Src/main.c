@@ -83,6 +83,9 @@ int uart_hour = 0;
 int uart_min = 0;
 int uart_sec = 0;
 int uart_cnt = 0;
+int uart_num_send = 0;
+int uart_receive = 0;
+int uart_data = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -513,6 +516,9 @@ void SystemClock_Config(void)
         	            SetUartHour();
         	            if(IsButtonSet())
         	            {
+							uart_cnt = 0;
+							uart_receive = 0;
+							uart_num_send = 0;
         	            	uart_min = 0;
         	                statusSetupTime = SET_UART_MIN;
         	            	uart_Rs232SendString((void*)"Minute: ");
@@ -522,6 +528,9 @@ void SystemClock_Config(void)
         	            SetUartMin();
         	            if(IsButtonSet())
         	            {
+							uart_cnt = 0;
+							uart_receive = 0;
+							uart_num_send = 0;
         	            	uart_sec = 0;
         	                statusSetupTime = SET_UART_SEC;
         	            	uart_Rs232SendString((void*)"Second: ");
@@ -531,12 +540,18 @@ void SystemClock_Config(void)
         	        	SetUartSec();
         	            if(IsButtonSet())
         	            {
+							uart_cnt = 0;
+							uart_receive = 0;
+							uart_num_send = 0;
         	            	uart_hour = 0;
         	                statusSetupTime = SET_UART_HOUR;
         	            	uart_Rs232SendString((void*)"Hour: ");
         	            }
         	            break;
         	        default:
+						uart_cnt = 0;
+						uart_receive = 0;
+						uart_num_send = 0;
         	            statusSetupTime = SET_UART_HOUR;
         	            uart_hour = 0;
         	            uart_Rs232SendString((void*)"Hour: ");
@@ -729,34 +744,116 @@ void SystemClock_Config(void)
 
 	void SetUartHour()
 	{
+		uart_cnt++;
+		if (uart_cnt == 200 && uart_receive == 0)
+		{
+			if (uart_num_send == 2)
+			{
+	            statusSystem = MODE_1;
+                statusSetupTime = INIT_SYSTEM;
+                lcd_ShowString(20, 40, "                  ", GREEN, BLACK, 24, 0);
+                lcd_ShowString(60, 210, "OUT OF TIME", GREEN, BLACK, 24, 0);
+                return;
+			}
+			uart_cnt = 0;
+			uart_Rs232SendString((void*)"Hour: ");
+			uart_num_send++;
+		}
     	lcd_ShowString(20, 40, "Updating hours ...", GREEN, BLACK, 24, 0);
     	while (!isRingBufferEmpty(&buffer))
 		{
-    		uart_hour = uart_hour * 10 + getFromRingBuffer(&buffer);
+    		uart_data = getFromRingBuffer(&buffer);
+    		if (uart_data > 9 || uart_data < 0)
+    		{
+    			uart_Rs232SendString((void*)"Hour: ");
+    		}
+    		else
+    		{
+				uart_hour = uart_hour * 10 + uart_data;
+				uart_receive = 1;
+    		}
 		}
-    	ds3231_Write(ADDRESS_HOUR, uart_hour);
+    	if (uart_receive == 1)
+    	{
+    		uart_receive = 0;
+    		ds3231_Write(ADDRESS_HOUR, uart_hour);
+    	}
 	}
 
 	void SetUartMin()
 	{
+		uart_cnt++;
+		if (uart_cnt == 200 && uart_receive == 0)
+		{
+			if (uart_num_send == 2)
+			{
+	            statusSystem = MODE_1;
+                statusSetupTime = INIT_SYSTEM;
+                lcd_ShowString(20, 40, "                  ", GREEN, BLACK, 24, 0);
+                lcd_ShowString(60, 210, "OUT OF TIME", GREEN, BLACK, 24, 0);
+                return;
+			}
+			uart_cnt = 0;
+			uart_Rs232SendString((void*)"Minute: ");
+			uart_num_send++;
+		}
     	lcd_ShowString(20, 40, "Updating min ...", GREEN, BLACK, 24, 0);
     	while (!isRingBufferEmpty(&buffer))
 		{
-//    		uart_min += getFromRingBuffer(&buffer);
-    		uart_min = uart_min * 10 + getFromRingBuffer(&buffer);
+    		uart_data = getFromRingBuffer(&buffer);
+    		if (uart_data > 9 || uart_data < 0)
+    		{
+    			uart_Rs232SendString((void*)"Minute: ");
+    		}
+    		else
+    		{
+				uart_min = uart_min * 10 + uart_data;
+				uart_receive = 1;
+    		}
 		}
-//    	lcd_ShowIntNum(100, 240, uart_min, 2, YELLOW, BLACK, 16);
-    	ds3231_Write(ADDRESS_MIN, uart_min);
+    	if (uart_receive == 1)
+    	{
+    		uart_receive = 0;
+    		ds3231_Write(ADDRESS_MIN, uart_min);
+    	}
 	}
 
 	void SetUartSec()
 	{
+		uart_cnt++;
+		if (uart_cnt == 200 && uart_receive == 0)
+		{
+			if (uart_num_send == 2)
+			{
+	            statusSystem = MODE_1;
+                statusSetupTime = INIT_SYSTEM;
+                lcd_ShowString(20, 40, "                  ", GREEN, BLACK, 24, 0);
+                lcd_ShowString(60, 210, "OUT OF TIME", GREEN, BLACK, 24, 0);
+                return;
+			}
+			uart_cnt = 0;
+			uart_Rs232SendString((void*)"Second: ");
+			uart_num_send++;
+		}
     	lcd_ShowString(20, 40, "Updating sec ...", GREEN, BLACK, 24, 0);
     	while (!isRingBufferEmpty(&buffer))
 		{
-    		uart_sec = uart_sec * 10 + getFromRingBuffer(&buffer);
+    		uart_data = getFromRingBuffer(&buffer);
+    		if (uart_data > 9 || uart_data < 0)
+    		{
+    			uart_Rs232SendString((void*)"Second: ");
+    		}
+    		else
+    		{
+				uart_sec = uart_sec * 10 + uart_data;
+				uart_receive = 1;
+    		}
 		}
-    	ds3231_Write(ADDRESS_SEC, uart_sec);
+    	if (uart_receive == 1)
+    	{
+    		uart_receive = 0;
+    		ds3231_Write(ADDRESS_SEC, uart_sec);
+    	}
 	}
 /* USER CODE END 4 */
 
