@@ -243,7 +243,7 @@ void SystemClock_Config(void)
 		count_adc = (count_adc + 1) % 20;
 		if (count_adc == 0) {
 			sensor_Read();
-			if (sensor_GetPotentiometer() >= 0.7 * 4095)
+			if (sensor_GetPotentiometer()*100/4095 >= 10)
 			{
 				if (alert == 0)
 				{
@@ -287,6 +287,9 @@ void SystemClock_Config(void)
 					16);
 			lcd_ShowString(10, 160, "Temperature(C):", RED, BLACK, 16, 0);
 			lcd_ShowFloatNum(140, 160, sensor_GetTemperature(), 4, RED, BLACK,
+					16);
+			lcd_ShowString(10, 200, "Humidity(%):", RED, BLACK, 16, 0);
+			lcd_ShowIntNum(140, 200, sensor_GetPotentiometer()*100/4095, 4, RED, BLACK,
 					16);
 		}
 	}

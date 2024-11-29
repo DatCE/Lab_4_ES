@@ -5,7 +5,7 @@ main.c:200:7:test_7seg	8	static
 main.c:208:7:setTime_led7	8	static
 main.c:229:7:TestUart	8	static
 main.c:242:7:TestADC	32	static
-main.c:294:7:TestBuzzer	8	static
-main.c:304:16:IsButtonUp	4	static
-main.c:312:16:IsButtonDown	4	static
-main.c:326:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:297:7:TestBuzzer	8	static
+main.c:307:16:IsButtonUp	4	static
+main.c:315:16:IsButtonDown	4	static
+main.c:329:6:Error_Handler	4	static,ignoring_inline_asm

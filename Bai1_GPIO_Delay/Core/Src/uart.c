@@ -68,7 +68,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == USART1){
 		// rs232 isr
 		// can be modified
-		HAL_UART_Transmit(&huart1, &receive_buffer1, 1, 10);
+//		HAL_UART_Transmit(&huart1, &receive_buffer1, 1, 10);
 
 
 		// turn on the receice interrupt
