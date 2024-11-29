@@ -141,7 +141,7 @@ int main(void) {
 
 	while (1) {
 		while (!flag_timer2);
-		flag_timer2 = 0;
+		setTimer2(50);
 		button_Scan();
         if (statusSystem == MODE_1){
             ds3231_ReadTime();

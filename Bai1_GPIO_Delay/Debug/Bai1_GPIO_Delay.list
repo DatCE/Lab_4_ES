@@ -39,13 +39,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  17 .debug_macro  000233be  00000000  00000000  0003a5c8  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_line   000167e9  00000000  00000000  0005d986  2**0
+ 18 .debug_line   000167e7  00000000  00000000  0005d986  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_str    000d08c0  00000000  00000000  0007416f  2**0
+ 19 .debug_str    000d08c0  00000000  00000000  0007416d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .comment      00000053  00000000  00000000  00144a2f  2**0
+ 20 .comment      00000053  00000000  00000000  00144a2d  2**0
                   CONTENTS, READONLY
- 21 .debug_frame  000049a8  00000000  00000000  00144a84  2**2
+ 21 .debug_frame  000049a8  00000000  00000000  00144a80  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -2718,10 +2718,9 @@ int main(void) {
  800142e:	881b      	ldrh	r3, [r3, #0]
  8001430:	2b00      	cmp	r3, #0
  8001432:	d0fb      	beq.n	800142c <main+0x30>
-		flag_timer2 = 0;
- 8001434:	4b07      	ldr	r3, [pc, #28]	; (8001454 <main+0x58>)
- 8001436:	2200      	movs	r2, #0
- 8001438:	801a      	strh	r2, [r3, #0]
+		setTimer2(50);
+ 8001434:	2032      	movs	r0, #50	; 0x32
+ 8001436:	f001 f8bd 	bl	80025b4 <setTimer2>
 		button_Scan();
  800143a:	f7ff f841 	bl	80004c0 <button_Scan>
         if (statusSystem == MODE_1){
