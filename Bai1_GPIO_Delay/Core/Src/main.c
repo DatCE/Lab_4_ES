@@ -148,6 +148,7 @@ int main(void)
 	while (1) {
 		while (!flag_timer2);
 		flag_timer2 = 0;
+		setTimer2(50);
 		button_Scan();
         if (statusSystem == MODE_1){
             ds3231_ReadTime();
@@ -240,6 +241,7 @@ void SystemClock_Config(void)
 
 	void TestUart() {
 		if (button_count[13] == 1) {
+			button_count[13] = 0;
 			uart_Rs232SendNum(ds3231_hours);
 			uart_Rs232SendString((void*)":");
 			uart_Rs232SendNum(ds3231_min);
